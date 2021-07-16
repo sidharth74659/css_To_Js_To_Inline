@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convert CSS -> Inline -> JS</title>
+
+    <style>
+      /* 
+<section class="green" style="position: absolute; width: 457px; height: 317px; background-color: green; resize: both; overflow: auto; margin: 2rem; top: 2rem; z-index : 500;"></section>
+
+*/
+
+      .container {
+        /*   padding: 1rem; */
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin: 1rem auto;
+      }
+
+      .style {
+        width: 457px;
+        height: 317px;
+        background-color: green;
+        resize: both;
+        overflow: auto;
+        margin: 2rem;
+        top: 2rem;
+        z-index: 500;
+      }
+
+      .output {
+        display: flex;
+        gap: 1rem;
+      }
+
+      .output textarea,
+      textarea {
+        margin: 0 auto;
+
+        width: 100%;
+        padding: 1rem;
+        height: 200px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="container">
+
+      <textarea name="external" id="external" class="external" PLACEHOLDER=".style {
+      width: 457px;
+      height: 317px;
+      background-color: green;
+      resize: both;
+      overflow: auto;
+      margin: 2rem;
+      top: 2rem;
+      z-index: 500;
+    }" spellcheck="false"></textarea>
+
+      <label for="prefix">elName :
+        <input type="text" class="prefix" id="prefix" placeholder="Ex : document">
+      </label>
+      <section class="output">
+
+        <textarea name="js" id="js" class="js" placeholder='
+    document.style.width = "457px";
+    document.style.height = "317px";
+    document.style.backgroundColor = "green";
+    document.style.resize = "both";
+    document.style.overflow = "auto";
+    document.style.margin = "2rem";
+    document.style.top = "2rem";
+    document.style.zIndex = "500";' spellcheck="false"></textarea>
+        <textarea name="internal" id="internal" class="internal"
+          placeholder='style="width=457px;height=317px;background-color=green;resize=both;overflow=auto;margin=2rem;top=2rem;z-index=500"'
+          spellcheck="false"></textarea>
+      </section>
+      <footer class="msg"></footer>
+    </main>
+
+
+    <script>
+
+      let externalSheetFormat = document.querySelector(".external");
+      let inlineFormat = document.querySelector(".internal");
+      let prefix = document.querySelector(".prefix");
+      let jsFormat = document.querySelector(".js");
+
+      document.addEventListener('DOMContentLoaded', run);
+
+      async function run() {
+        let response = await fetch('./cssjs.json');
+        css_js = await response.json();
+        // externalToInline()
+      }
+
+      jsFormat.addEventListener('click', copy);
+      inlineFormat.addEventListener('click', copy);
+      prefix.addEventListener('input', externalToInline)
+      externalSheetFormat.addEventListener('input', externalToInline);
+
+      // externalToInline()
+
+      function externalToInline() {
+
+        let [content] = externalSheetFormat.value.match("[^\{]+(?=\})") || "";
+        let prefix = document.querySelector(".prefix").value || "document"
+
+        let jsOutput = '', cssOutput = 'style="';
+        if (content) {
+          content.replaceAll(/([ ]{2,})|(\r?\n|\r)/g, '')
+            .trim().split(';').filter(Boolean)
+            .map(el => {
+              let [key, value] = el.replaceAll(':', '=').split("=");
+              cssKey = key.trim();
+              cssValue = value.trim();
+              if (CSS.supports(cssKey, cssValue)) {
+                jsKey = `${prefix}.style.${css_js[key.trim()]}`;
+                jsValue = `${value.trim()}`;
+
+                jsOutput += `${jsKey} = "${jsValue}";\n`;
+                cssOutput += `${cssKey} = ${cssValue};`
+              }
+              else
+                jsOutput = cssOutput = `Looks like ${key ? key : ''} ${value ? 'or ' + value : ''} is invalid`;
+            })
+        } else {
+          jsOutput = cssOutput = "there seems to be an error..are the styles inside { } ?";
+        }
+
+        jsFormat.innerHTML = jsOutput;
+        inlineFormat.innerHTML = cssOutput + '"';
+      }
+
+      function copy(e) {
+        e.target.select();
+        document.execCommand('copy');
+
+        document.querySelector(".msg").innerHTML = "COPIED"
+        setTimeout(() => document.querySelector(".msg").innerHTML = "", 2000)
+      }
+
+    </script>
+  </body>
+
+</html>
